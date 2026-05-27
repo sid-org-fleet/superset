@@ -50,4 +50,10 @@ describe('ColumnElement', () => {
       container.querySelector('[data-test="col-name"]')?.firstChild,
     ).toHaveTextContent('last_name');
   });
+  test('renders a tooltip for keyed columns with typed props', () => {
+    const { container } = render(<ColumnElement column={table.columns[0]} />);
+    const tooltipTrigger = container.querySelector('.ColumnElement');
+    expect(tooltipTrigger).toBeInTheDocument();
+    expect(tooltipTrigger?.querySelector('i.fa-key')).toBeInTheDocument();
+  });
 });
