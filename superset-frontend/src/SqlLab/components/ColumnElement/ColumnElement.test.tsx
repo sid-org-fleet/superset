@@ -17,7 +17,8 @@
  * under the License.
  */
 import { isValidElement } from 'react';
-import { render } from 'spec/helpers/testing-library';
+import { render, screen } from 'spec/helpers/testing-library';
+import userEvent from '@testing-library/user-event';
 import ColumnElement from 'src/SqlLab/components/ColumnElement';
 import { table } from 'src/SqlLab/fixtures';
 
@@ -49,5 +50,13 @@ describe('ColumnElement', () => {
     expect(
       container.querySelector('[data-test="col-name"]')?.firstChild,
     ).toHaveTextContent('last_name');
+  });
+  test('renders tooltip with typed TooltipProps on key hover', async () => {
+    const { container } = render(<ColumnElement column={table.columns[0]} />);
+    const keyIcon = container.querySelector('i.fa-key')!;
+    await userEvent.hover(keyIcon);
+    const tooltip = await screen.findByRole('tooltip');
+    expect(tooltip).toBeInTheDocument();
+    expect(tooltip).toHaveTextContent('Primary key');
   });
 });
