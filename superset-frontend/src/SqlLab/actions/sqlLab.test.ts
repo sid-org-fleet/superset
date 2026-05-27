@@ -37,15 +37,16 @@ import { EMPTY_STATE_QE_ID } from 'src/SqlLab/hooks/useQueryEditor';
 import { ToastType } from '../../components/MessageToasts/types';
 
 const isFeatureEnabledMock = isFeatureEnabled as unknown as jest.Mock;
-const query = { ...queryFixture, id: queryId } as any;
+const query = { ...queryFixture, id: queryId };
 // Cast fixture to satisfy SqlLabRootState for getState callbacks in thunk tests
 const typedInitialState = initialState as unknown as SqlLabRootState;
 
 type DispatchExts = ThunkDispatch<SqlLabRootState, undefined, AnyAction>;
 
 const middlewares = [thunk];
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const mockStore = configureMockStore<any, DispatchExts>(middlewares);
+const mockStore = configureMockStore<Record<string, unknown>, DispatchExts>(
+  middlewares,
+);
 
 jest.mock('nanoid', () => ({
   nanoid: () => 'abcd',
@@ -429,7 +430,7 @@ describe('async actions', () => {
     const makeRequest = () => {
       const store = mockStore(initialState);
       const request = actions.fetchQueryResults(query);
-      return request(dispatch, store.getState, undefined);
+      return request(dispatch, store.getState as () => SqlLabRootState, undefined);
     };
 
     test('makes the fetch request', () => {
@@ -636,7 +637,7 @@ describe('async actions', () => {
       };
       const store = mockStore(state);
       const request = actions.reRunQuery(query);
-      request(store.dispatch, store.getState, undefined);
+      request(store.dispatch, store.getState as () => SqlLabRootState, undefined);
       expect(store.getActions()[0].query.id).toEqual('abcd');
     });
   });
@@ -720,7 +721,7 @@ describe('async actions', () => {
         },
       ];
       const request = actions.cloneQueryToNewTab(query, true);
-      request(store.dispatch, store.getState, undefined);
+      request(store.dispatch, store.getState as () => SqlLabRootState, undefined);
 
       expect(store.getActions()).toEqual(expectedActions);
     });
@@ -783,7 +784,8 @@ describe('async actions', () => {
     test('calls API endpint with correct params', async () => {
       supersetClientGetSpy.mockResolvedValue({
         json: { result: mockSavedQueryApiResponse },
-      } as any);
+        response: new Response(),
+      });
 
       await makeRequest(123);
 
@@ -795,7 +797,8 @@ describe('async actions', () => {
     test('dispatches addQueryEditor with correct params on successful API call', async () => {
       supersetClientGetSpy.mockResolvedValue({
         json: { result: mockSavedQueryApiResponse },
-      } as any);
+        response: new Response(),
+      });
 
       const expectedParams = {
         name: 'Query 1',
@@ -820,7 +823,10 @@ describe('async actions', () => {
     });
 
     test('should dispatch addDangerToast on API error', async () => {
-      supersetClientGetSpy.mockResolvedValue(new Error() as any);
+      supersetClientGetSpy.mockResolvedValue({
+        json: {},
+        response: new Response(),
+      });
 
       await makeRequest(1);
 
@@ -881,7 +887,7 @@ describe('async actions', () => {
               schema: defaultQueryEditor.schema,
               autorun: false,
               queryLimit:
-                (defaultQueryEditor as any).queryLimit ||
+                (defaultQueryEditor as QueryEditor).queryLimit ||
                 initialState.common.conf.DEFAULT_SQLLAB_LIMIT,
               inLocalStorage: true,
               loaded: true,
@@ -889,7 +895,7 @@ describe('async actions', () => {
           },
         ];
         const request = actions.addNewQueryEditor();
-        request(store.dispatch, store.getState, undefined);
+        request(store.dispatch, store.getState as () => SqlLabRootState, undefined);
         expect(store.getActions()).toEqual(expectedActions);
       });
 
@@ -927,7 +933,7 @@ describe('async actions', () => {
           },
         ];
         const request = actions.addNewQueryEditor();
-        request(store.dispatch, store.getState, undefined);
+        request(store.dispatch, store.getState as () => SqlLabRootState, undefined);
         expect(store.getActions()).toEqual(expectedActions);
       });
     });
@@ -1227,7 +1233,7 @@ describe('async actions', () => {
             },
           });
           const request = actions.queryEditorSetAndSaveSql(queryEditor, sql);
-          return request(store.dispatch, store.getState, undefined).then(() => {
+          return request(store.dispatch, store.getState as () => SqlLabRootState, undefined).then(() => {
             expect(store.getActions()).toEqual(expectedActions);
             expect(
               fetchMock.callHistory.calls(updateTabStateEndpoint),
@@ -1250,7 +1256,7 @@ describe('async actions', () => {
             },
           });
           const request = actions.queryEditorSetAndSaveSql(queryEditor, sql);
-          request(store.dispatch, store.getState, undefined);
+          request(store.dispatch, store.getState as () => SqlLabRootState, undefined);
 
           expect(store.getActions()).toEqual(expectedActions);
           expect(
@@ -1327,7 +1333,7 @@ describe('async actions', () => {
           catalogName,
           schemaName,
         );
-        request(store.dispatch, store.getState, undefined);
+        request(store.dispatch, store.getState as () => SqlLabRootState, undefined);
         expect(store.getActions()[0]).toEqual(
           expect.objectContaining({
             table: expect.objectContaining({
@@ -1365,7 +1371,7 @@ describe('async actions', () => {
           catalogName,
           schemaName,
         );
-        request(store.dispatch, store.getState, undefined);
+        request(store.dispatch, store.getState as () => SqlLabRootState, undefined);
 
         expect(store.getActions()[0]).toEqual(
           expect.objectContaining({
@@ -1404,7 +1410,7 @@ describe('async actions', () => {
           catalogName,
           schemaName,
         );
-        request(store.dispatch, store.getState, undefined);
+        request(store.dispatch, store.getState as () => SqlLabRootState, undefined);
 
         expect(store.getActions()[0]).toEqual(
           expect.objectContaining({
@@ -1432,11 +1438,11 @@ describe('async actions', () => {
           actions.MERGE_TABLE, // syncTable
         ];
         const request = actions.syncTable(
-          query as any,
-          tableName as any,
+          query as Table,
+          {},
           schemaName,
         );
-        return request(store.dispatch, store.getState, undefined).then(() => {
+        return request(store.dispatch, store.getState as () => SqlLabRootState, undefined).then(() => {
           expect(store.getActions().map(a => a.type)).toEqual(
             expectedActionTypes,
           );
@@ -1499,7 +1505,7 @@ describe('async actions', () => {
           catalog: catalogName,
           schema: schemaName,
         });
-        return request(store.dispatch, store.getState, undefined).then(() => {
+        return request(store.dispatch, store.getState as () => SqlLabRootState, undefined).then(() => {
           expect(store.getActions().map(a => a.type)).toEqual(
             expectedActionTypes,
           );
@@ -1525,7 +1531,7 @@ describe('async actions', () => {
           },
           true,
         );
-        return request(store.dispatch, store.getState, undefined).then(() => {
+        return request(store.dispatch, store.getState as () => SqlLabRootState, undefined).then(() => {
           expect(store.getActions().map(a => a.type)).toEqual(
             expectedActionTypes,
           );
@@ -1942,5 +1948,33 @@ describe('async actions', () => {
           });
       });
     });
+  });
+});
+
+// eslint-disable-next-line no-restricted-globals -- TODO: Migrate from describe blocks
+describe('type safety of test fixtures', () => {
+  test('query fixture has required Query fields', () => {
+    expect(query).toHaveProperty('id');
+    expect(query).toHaveProperty('sql');
+    expect(typeof query.id).toBe('string');
+    expect(typeof query.sql).toBe('string');
+  });
+
+  test('query fixture has fields used by saveQuery (Partial<QueryEditor>)', () => {
+    expect(query).toHaveProperty('name');
+    expect(query).toHaveProperty('dbId');
+    expect(typeof query.name).toBe('string');
+    expect(typeof query.dbId).toBe('number');
+  });
+
+  test('mockStore accepts empty state and produces a valid store', () => {
+    const store = mockStore({});
+    expect(store.getState()).toEqual({});
+    expect(typeof store.dispatch).toBe('function');
+  });
+
+  test('mockStore accepts initialState fixture', () => {
+    const store = mockStore(initialState);
+    expect(store.getState()).toEqual(initialState);
   });
 });
