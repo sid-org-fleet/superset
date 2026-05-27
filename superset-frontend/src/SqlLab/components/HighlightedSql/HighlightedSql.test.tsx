@@ -19,6 +19,7 @@
 import { isValidElement } from 'react';
 
 import HighlightedSql from 'src/SqlLab/components/HighlightedSql';
+import type { HighlightedSqlProps } from 'src/SqlLab/components/HighlightedSql';
 import { fireEvent, render } from 'spec/helpers/testing-library';
 
 const sql =
@@ -72,4 +73,24 @@ test('renders tabs when rawSql has an added LIMIT', () => {
   expect(queryByRole('dialog')).toBeInTheDocument();
   expect(getByText('Executed SQL')).toBeInTheDocument();
   expect(getByText('Source SQL')).toBeInTheDocument();
+});
+
+test('renders without shrink when shrink is explicitly false', () => {
+  const { getByTestId } = render(
+    <HighlightedSql sql={sql} shrink={false} />,
+  );
+  expect(getByTestId('span-modal-trigger')).toBeInTheDocument();
+});
+
+test('HighlightedSqlProps shrink property accepts boolean values', () => {
+  const props: HighlightedSqlProps = {
+    sql: 'SELECT 1',
+    shrink: true,
+  };
+  expect(props.shrink).toBe(true);
+
+  const propsWithoutShrink: HighlightedSqlProps = {
+    sql: 'SELECT 1',
+  };
+  expect(propsWithoutShrink.shrink).toBeUndefined();
 });
