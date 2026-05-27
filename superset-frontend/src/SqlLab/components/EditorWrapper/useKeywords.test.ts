@@ -19,6 +19,8 @@
 import fetchMock from 'fetch-mock';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { getExtensionsRegistry } from '@superset-ui/core';
+import type { ThunkDispatch } from 'redux-thunk';
+import type { AnyAction } from 'redux';
 import {
   createWrapper,
   defaultStore as store,
@@ -29,6 +31,7 @@ import { schemaApiUtil } from 'src/hooks/apiResources/schemas';
 import { tableApiUtil } from 'src/hooks/apiResources/tables';
 import { addTable } from 'src/SqlLab/actions/sqlLab';
 import { initialState } from 'src/SqlLab/fixtures';
+import type { SqlLabRootState } from 'src/SqlLab/types';
 import reducers from 'spec/helpers/reducerIndex';
 import {
   SCHEMA_AUTOCOMPLETE_SCORE,
@@ -230,14 +233,13 @@ test('returns column keywords among selected tables', async () => {
         },
       ),
     );
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    storeWithSqlLab.dispatch(
+    (storeWithSqlLab.dispatch as ThunkDispatch<SqlLabRootState, undefined, AnyAction>)(
       addTable(
-        { id: expectQueryEditorId } as any,
+        { id: expectQueryEditorId },
         expectTable,
         expectCatalog,
         expectSchema,
-      ) as any,
+      ),
     );
   });
 
