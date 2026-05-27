@@ -58,6 +58,15 @@ test('renders tabs when rawSql differs from sql', () => {
   expect(getByText('Source SQL')).toBeInTheDocument();
 });
 
+test('renders full SQL without truncation when shrink is false', () => {
+  const { getByTestId } = render(
+    <HighlightedSql sql={sql} shrink={false} maxWidth={5} />,
+  );
+  const trigger = getByTestId('span-modal-trigger');
+  expect(trigger).toBeInTheDocument();
+  expect(trigger.textContent).toContain(sql);
+});
+
 test('renders tabs when rawSql has an added LIMIT', () => {
   const { queryByRole, getByTestId, getByText } = render(
     <HighlightedSql
