@@ -326,6 +326,46 @@ test('returns long keywords with detail', async () => {
   );
 });
 
+test('table keywords include insertMatch completer that handles typed autocomplete data', async () => {
+  const dbFunctionNamesApiRoute = `glob:*/api/v1/database/${expectDbId}/function_names/`;
+  fetchMock.get(dbFunctionNamesApiRoute, fakeFunctionNamesApiResult);
+
+  const { result } = renderHook(
+    () =>
+      useKeywords({
+        queryEditorId: 'testqueryid',
+        dbId: expectDbId,
+        schema: expectSchema,
+      }),
+    {
+      wrapper: createWrapper({
+        useRedux: true,
+        store,
+      }),
+    },
+  );
+
+  await waitFor(() =>
+    expect(fetchMock.callHistory.calls(dbFunctionNamesApiRoute).length).toBe(1),
+  );
+
+  const tableKeyword = result.current.find(k => k.meta === 'table');
+  expect(tableKeyword).toBeDefined();
+  expect(tableKeyword).toHaveProperty('completer');
+  expect(tableKeyword!.completer).toHaveProperty('insertMatch');
+  expect(typeof tableKeyword!.completer!.insertMatch).toBe('function');
+
+  const schemaKeyword = result.current.find(k => k.meta === 'schema');
+  expect(schemaKeyword).toBeDefined();
+  expect(schemaKeyword).toHaveProperty('completer');
+  expect(typeof schemaKeyword!.completer!.insertMatch).toBe('function');
+
+  const functionKeyword = result.current.find(k => k.meta === 'function');
+  expect(functionKeyword).toBeDefined();
+  expect(functionKeyword).toHaveProperty('completer');
+  expect(typeof functionKeyword!.completer!.insertMatch).toBe('function');
+});
+
 test('Add custom keywords for autocomplete', () => {
   const expected = [
     {

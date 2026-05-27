@@ -44,6 +44,26 @@ type Params = {
   tabViewId?: string;
 };
 
+interface QueryCacheEntry {
+  status?: string;
+  originalArgs?: {
+    dbId?: string | number;
+    catalog?: string | null;
+    schema?: string;
+  };
+  data?: {
+    options?: Array<{ value: string; label?: string }>;
+    columns?: Array<{ name: string }>;
+  };
+}
+
+interface AutocompleteItem {
+  meta: string;
+  value: string;
+  caption: string;
+  schema?: string;
+}
+
 const EMPTY_LIST = [] as typeof sqlKeywords;
 
 const { useQueryState: useSchemasQueryState } = schemaEndpoints.schemas;
@@ -108,7 +128,7 @@ export function useKeywords(
     const tables: { value: string; label: string; schema: string }[] = [];
     const seen = new Set<string>();
     const queries = apiState.queries ?? {};
-    for (const entry of Object.values(queries) as any[]) {
+    for (const entry of Object.values(queries) as QueryCacheEntry[]) {
       const arg = entry?.originalArgs;
       if (
         arg?.dbId === dbId &&
@@ -138,7 +158,7 @@ export function useKeywords(
     if (skipFetch || !dbId || !apiState) return [];
     const columns = new Set<string>();
     const queries = apiState.queries ?? {};
-    for (const entry of Object.values(queries) as any[]) {
+    for (const entry of Object.values(queries) as QueryCacheEntry[]) {
       const arg = entry?.originalArgs;
       if (
         entry?.status === 'fulfilled' &&
@@ -154,7 +174,7 @@ export function useKeywords(
     return [...columns];
   }, [dbId, normalizedCatalog, apiState, skipFetch]);
 
-  const insertMatch = useEffectEvent((editor: Editor, data: any) => {
+  const insertMatch = useEffectEvent((editor: Editor, data: AutocompleteItem) => {
     if (data.meta === 'table') {
       dispatch(
         addTable(
