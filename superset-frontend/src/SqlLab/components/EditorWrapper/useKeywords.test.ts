@@ -326,6 +326,99 @@ test('returns long keywords with detail', async () => {
   );
 });
 
+test('table keywords include completer with insertMatch callback', async () => {
+  const dbFunctionNamesApiRoute = `glob:*/api/v1/database/${expectDbId}/function_names/`;
+  fetchMock.get(dbFunctionNamesApiRoute, fakeFunctionNamesApiResult);
+
+  const { result } = renderHook(
+    () =>
+      useKeywords({
+        queryEditorId: 'testqueryid',
+        dbId: expectDbId,
+        schema: expectSchema,
+      }),
+    {
+      wrapper: createWrapper({
+        useRedux: true,
+        store,
+      }),
+    },
+  );
+
+  await waitFor(() =>
+    expect(fetchMock.callHistory.calls(dbFunctionNamesApiRoute).length).toBe(1),
+  );
+
+  const tableKeyword = result.current.find(
+    kw => kw.meta === 'table' && kw.value === fakeTableApiResult.result[0].value,
+  );
+  expect(tableKeyword).toBeDefined();
+  expect(tableKeyword).toHaveProperty('completer');
+  expect(tableKeyword!.completer).toHaveProperty('insertMatch');
+  expect(typeof tableKeyword!.completer!.insertMatch).toBe('function');
+});
+
+test('table keywords carry schema from cached query entry', async () => {
+  const dbFunctionNamesApiRoute = `glob:*/api/v1/database/${expectDbId}/function_names/`;
+  fetchMock.get(dbFunctionNamesApiRoute, fakeFunctionNamesApiResult);
+
+  const { result } = renderHook(
+    () =>
+      useKeywords({
+        queryEditorId: 'testqueryid',
+        dbId: expectDbId,
+        schema: expectSchema,
+      }),
+    {
+      wrapper: createWrapper({
+        useRedux: true,
+        store,
+      }),
+    },
+  );
+
+  await waitFor(() =>
+    expect(fetchMock.callHistory.calls(dbFunctionNamesApiRoute).length).toBe(1),
+  );
+
+  const tableKeyword = result.current.find(
+    kw => kw.meta === 'table' && kw.value === fakeTableApiResult.result[0].value,
+  );
+  expect(tableKeyword).toBeDefined();
+  expect(tableKeyword).toHaveProperty('schema', expectSchema);
+});
+
+test('schema keywords include completer with insertMatch callback', async () => {
+  const dbFunctionNamesApiRoute = `glob:*/api/v1/database/${expectDbId}/function_names/`;
+  fetchMock.get(dbFunctionNamesApiRoute, fakeFunctionNamesApiResult);
+
+  const { result } = renderHook(
+    () =>
+      useKeywords({
+        queryEditorId: 'testqueryid',
+        dbId: expectDbId,
+        schema: expectSchema,
+      }),
+    {
+      wrapper: createWrapper({
+        useRedux: true,
+        store,
+      }),
+    },
+  );
+
+  await waitFor(() =>
+    expect(fetchMock.callHistory.calls(dbFunctionNamesApiRoute).length).toBe(1),
+  );
+
+  const schemaKeyword = result.current.find(
+    kw => kw.meta === 'schema' && kw.value === fakeSchemaApiResult[0],
+  );
+  expect(schemaKeyword).toBeDefined();
+  expect(schemaKeyword).toHaveProperty('completer');
+  expect(typeof schemaKeyword!.completer!.insertMatch).toBe('function');
+});
+
 test('Add custom keywords for autocomplete', () => {
   const expected = [
     {
