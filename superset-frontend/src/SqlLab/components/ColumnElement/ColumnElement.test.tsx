@@ -50,4 +50,23 @@ describe('ColumnElement', () => {
       container.querySelector('[data-test="col-name"]')?.firstChild,
     ).toHaveTextContent('last_name');
   });
+  test('renders the column type', () => {
+    const { getByText } = render(<ColumnElement column={table.columns[0]} />);
+    expect(getByText('INTEGER')).toBeInTheDocument();
+  });
+  test('renders with actions prop', () => {
+    const { getByText } = render(
+      <ColumnElement
+        column={table.columns[0]}
+        actions={<span>Test Action</span>}
+      />,
+    );
+    expect(getByText('Test Action')).toBeInTheDocument();
+  });
+  test('renders tooltip wrapper for keyed columns', () => {
+    const { container } = render(<ColumnElement column={table.columns[0]} />);
+    expect(
+      container.querySelector('.ColumnElement'),
+    ).toBeInTheDocument();
+  });
 });
