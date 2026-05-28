@@ -44,6 +44,26 @@ type Params = {
   tabViewId?: string;
 };
 
+interface CachedQueryEntry {
+  originalArgs?: {
+    dbId?: string | number;
+    catalog?: string | null;
+    schema?: string;
+  };
+  status?: string;
+  data?: {
+    options?: Array<{ value: string; label?: string }>;
+    columns?: Array<{ name: string }>;
+  };
+}
+
+interface AutocompleteMatchData {
+  meta: string;
+  value: string;
+  caption: string;
+  schema?: string;
+}
+
 const EMPTY_LIST = [] as typeof sqlKeywords;
 
 const { useQueryState: useSchemasQueryState } = schemaEndpoints.schemas;
@@ -108,7 +128,7 @@ export function useKeywords(
     const tables: { value: string; label: string; schema: string }[] = [];
     const seen = new Set<string>();
     const queries = apiState.queries ?? {};
-    for (const entry of Object.values(queries) as any[]) {
+    for (const entry of Object.values(queries) as CachedQueryEntry[]) {
       const arg = entry?.originalArgs;
       if (
         arg?.dbId === dbId &&
@@ -138,7 +158,7 @@ export function useKeywords(
     if (skipFetch || !dbId || !apiState) return [];
     const columns = new Set<string>();
     const queries = apiState.queries ?? {};
-    for (const entry of Object.values(queries) as any[]) {
+    for (const entry of Object.values(queries) as CachedQueryEntry[]) {
       const arg = entry?.originalArgs;
       if (
         entry?.status === 'fulfilled' &&
@@ -154,29 +174,31 @@ export function useKeywords(
     return [...columns];
   }, [dbId, normalizedCatalog, apiState, skipFetch]);
 
-  const insertMatch = useEffectEvent((editor: Editor, data: any) => {
-    if (data.meta === 'table') {
-      dispatch(
-        addTable(
-          { id: String(queryEditorId), dbId: dbId as number, tabViewId },
-          data.value,
-          catalog ?? null,
-          data.schema ?? schema ?? '',
-          false, // Don't auto-expand/switch tabs when adding via autocomplete
-        ),
+  const insertMatch = useEffectEvent(
+    (editor: Editor, data: AutocompleteMatchData) => {
+      if (data.meta === 'table') {
+        dispatch(
+          addTable(
+            { id: String(queryEditorId), dbId: dbId as number, tabViewId },
+            data.value,
+            catalog ?? null,
+            data.schema ?? schema ?? '',
+            false, // Don't auto-expand/switch tabs when adding via autocomplete
+          ),
+        );
+      }
+
+      let { caption } = data;
+      if (data.meta === 'table' && caption.includes(' ')) {
+        caption = `"${caption}"`;
+      }
+
+      // executing https://github.com/thlorenz/brace/blob/3a00c5d59777f9d826841178e1eb36694177f5e6/ext/language_tools.js#L1448
+      editor.completer.insertMatch(
+        `${caption}${['function', 'schema'].includes(data.meta) ? '' : ' '}`,
       );
-    }
-
-    let { caption } = data;
-    if (data.meta === 'table' && caption.includes(' ')) {
-      caption = `"${caption}"`;
-    }
-
-    // executing https://github.com/thlorenz/brace/blob/3a00c5d59777f9d826841178e1eb36694177f5e6/ext/language_tools.js#L1448
-    editor.completer.insertMatch(
-      `${caption}${['function', 'schema'].includes(data.meta) ? '' : ' '}`,
-    );
-  });
+    },
+  );
 
   const schemaKeywords = useMemo(
     () =>
