@@ -365,3 +365,121 @@ test('Add custom keywords for autocomplete', () => {
   expect(result.current).toContainEqual(expect.objectContaining(expected[0]));
   expect(result.current).toContainEqual(expect.objectContaining(expected[1]));
 });
+
+test('table keywords have a typed insertMatch completer', async () => {
+  const dbFunctionNamesApiRoute = `glob:*/api/v1/database/${expectDbId}/function_names/`;
+  fetchMock.get(dbFunctionNamesApiRoute, fakeFunctionNamesApiResult);
+
+  const { result } = renderHook(
+    () =>
+      useKeywords({
+        queryEditorId: 'testqueryid',
+        dbId: expectDbId,
+        schema: expectSchema,
+      }),
+    {
+      wrapper: createWrapper({
+        useRedux: true,
+        store,
+      }),
+    },
+  );
+
+  await waitFor(() =>
+    expect(fetchMock.callHistory.calls(dbFunctionNamesApiRoute).length).toBe(1),
+  );
+
+  const tableKeyword = result.current.find(k => k.meta === 'table');
+  expect(tableKeyword).toBeDefined();
+  expect(tableKeyword).toHaveProperty('completer');
+  expect(tableKeyword!.completer).toHaveProperty('insertMatch');
+  expect(typeof tableKeyword!.completer!.insertMatch).toBe('function');
+
+  const schemaKeyword = result.current.find(k => k.meta === 'schema');
+  expect(schemaKeyword).toBeDefined();
+  expect(schemaKeyword).toHaveProperty('completer');
+  expect(typeof schemaKeyword!.completer!.insertMatch).toBe('function');
+});
+
+test('insertMatch dispatches addTable for table meta entries', async () => {
+  const dbFunctionNamesApiRoute = `glob:*/api/v1/database/${expectDbId}/function_names/`;
+  fetchMock.get(dbFunctionNamesApiRoute, fakeFunctionNamesApiResult);
+
+  const storeWithSqlLab = createStore(initialState, reducers);
+
+  act(() => {
+    storeWithSqlLab.dispatch(
+      schemaApiUtil.upsertQueryData(
+        'schemas',
+        {
+          dbId: expectDbId,
+          forceRefresh: false,
+        },
+        fakeSchemaApiResult.map(value => ({
+          value,
+          label: value,
+          title: value,
+        })),
+      ),
+    );
+    storeWithSqlLab.dispatch(
+      tableApiUtil.upsertQueryData(
+        'tables',
+        { dbId: expectDbId, schema: expectSchema },
+        {
+          options: fakeTableApiResult.result,
+          hasMore: false,
+        },
+      ),
+    );
+  });
+
+  const { result } = renderHook(
+    () =>
+      useKeywords({
+        queryEditorId: 'testqueryid',
+        dbId: expectDbId,
+        schema: expectSchema,
+      }),
+    {
+      wrapper: createWrapper({
+        useRedux: true,
+        store: storeWithSqlLab,
+      }),
+    },
+  );
+
+  await waitFor(() =>
+    expect(fetchMock.callHistory.calls(dbFunctionNamesApiRoute).length).toBe(1),
+  );
+
+  const tableKeyword = result.current.find(k => k.meta === 'table');
+  expect(tableKeyword).toBeDefined();
+
+  const mockEditor = {
+    completer: {
+      insertMatch: jest.fn(),
+      completers: [],
+    },
+  };
+
+  const caption = tableKeyword!.value;
+  const hasSpace = caption.includes(' ');
+  const expectedCaption = hasSpace ? `"${caption}"` : caption;
+
+  act(() => {
+    tableKeyword!.completer!.insertMatch(
+      mockEditor as never,
+      {
+        meta: 'table',
+        value: tableKeyword!.value,
+        caption,
+        schema: expectSchema,
+      } as never,
+    );
+  });
+
+  expect(mockEditor.completer.insertMatch).toHaveBeenCalledWith(
+    `${expectedCaption} `,
+  );
+});
