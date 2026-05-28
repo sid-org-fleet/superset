@@ -27,7 +27,10 @@ import {
 import { api } from 'src/hooks/apiResources/queryApi';
 import { schemaApiUtil } from 'src/hooks/apiResources/schemas';
 import { tableApiUtil } from 'src/hooks/apiResources/tables';
+import type { AnyAction } from 'redux';
+import type { ThunkDispatch } from 'redux-thunk';
 import { addTable } from 'src/SqlLab/actions/sqlLab';
+import type { QueryEditor, SqlLabRootState } from 'src/SqlLab/types';
 import { initialState } from 'src/SqlLab/fixtures';
 import reducers from 'spec/helpers/reducerIndex';
 import {
@@ -230,14 +233,13 @@ test('returns column keywords among selected tables', async () => {
         },
       ),
     );
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    storeWithSqlLab.dispatch(
+    (storeWithSqlLab.dispatch as ThunkDispatch<SqlLabRootState, undefined, AnyAction>)(
       addTable(
-        { id: expectQueryEditorId } as any,
+        { id: expectQueryEditorId },
         expectTable,
         expectCatalog,
         expectSchema,
-      ) as any,
+      ),
     );
   });
 
@@ -324,6 +326,18 @@ test('returns long keywords with detail', async () => {
       }),
     ),
   );
+});
+
+test('addTable dispatch accepts Partial<QueryEditor> without any cast', () => {
+  const queryEditor: Partial<QueryEditor> = { id: 'typed-editor-id' };
+  const storeWithSqlLab = createStore(initialState, reducers);
+  const thunkAction = addTable(queryEditor, 'test_table', null, 'test_schema');
+  expect(typeof thunkAction).toBe('function');
+  act(() => {
+    (storeWithSqlLab.dispatch as ThunkDispatch<SqlLabRootState, undefined, AnyAction>)(
+      thunkAction,
+    );
+  });
 });
 
 test('Add custom keywords for autocomplete', () => {
